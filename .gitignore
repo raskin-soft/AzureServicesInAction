@@ -10,7 +10,7 @@
 *.userosscache
 *.sln.docstates
 *.env
-appsettings.Development.json
+AzureServicesInAction/WebApp/appsettings.Development.json
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
