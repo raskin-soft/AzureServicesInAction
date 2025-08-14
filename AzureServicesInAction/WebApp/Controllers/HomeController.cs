@@ -27,16 +27,16 @@ namespace WebApp.Controllers
             _config = config;
 
             // Initialize tenantId, clientId, and clientSecret from _config
-            //tenantId = _config["AzureAd:TenantId"];
-            //clientId = _config["AzureAd:ClientId"];
-            //clientSecret = _config["AzureAd:ClientSecret"];
+            tenantId = _config["AzureAd:TenantId"];
+            clientId = _config["AzureAd:ClientId"];
+            clientSecret = _config["AzureAd:ClientSecret"];
 
             keyVaultUrl = "https://raskinkeyvault.vault.azure.net/";
 
             // for Production use via CI/CD pipeline, use environment variables
-            tenantId = Environment.GetEnvironmentVariable("AZURE_TENANT_ID");
-            clientId = Environment.GetEnvironmentVariable("AZURE_CLIENT_ID");
-            clientSecret = Environment.GetEnvironmentVariable("AZURE_CLIENT_SECRET");
+            //tenantId = Environment.GetEnvironmentVariable("AZURE_TENANT_ID");
+            //clientId = Environment.GetEnvironmentVariable("AZURE_CLIENT_ID");
+            //clientSecret = Environment.GetEnvironmentVariable("AZURE_CLIENT_SECRET");
         }
 
         public IActionResult Index()
