@@ -15,28 +15,11 @@ namespace WebApp.Controllers
         private readonly ILogger<HomeController> _logger;
         private readonly IConfiguration _config;
 
-        private readonly string tenantId;
-        private readonly string clientId;
-        private readonly string clientSecret;
-
-        private readonly string keyVaultUrl;
-
         public HomeController(ILogger<HomeController> logger, IConfiguration config)
         {
             _logger = logger;
             _config = config;
 
-            // Initialize tenantId, clientId, and clientSecret from _config
-            tenantId = _config["AzureAd:TenantId"];
-            clientId = _config["AzureAd:ClientId"];
-            clientSecret = _config["AzureAd:ClientSecret"];
-
-            keyVaultUrl = "https://raskinkeyvault.vault.azure.net/";
-
-            // for Production use via CI/CD pipeline, use environment variables
-            //tenantId = Environment.GetEnvironmentVariable("AZURE_TENANT_ID");
-            //clientId = Environment.GetEnvironmentVariable("AZURE_CLIENT_ID");
-            //clientSecret = Environment.GetEnvironmentVariable("AZURE_CLIENT_SECRET");
         }
 
         public IActionResult Index()
@@ -57,6 +40,12 @@ namespace WebApp.Controllers
 
             try
             {
+                var tenantId = _config["AzureAd:TenantId"];
+                var clientId = _config["AzureAd:ClientId"];
+                var clientSecret = _config["AzureAd:ClientSecret"];
+
+                var keyVaultUrl = "https://raskinkeyvault.vault.azure.net/";
+
                 var AzureADcredential = new ClientSecretCredential(tenantId, clientId, clientSecret);
                 var client = new SecretClient(new Uri(keyVaultUrl), AzureADcredential);
 
@@ -134,6 +123,12 @@ namespace WebApp.Controllers
         public async Task<IActionResult> GetAllImages()
         {
             //var connectionString = _config["environmentVariables:BlobConnection"];
+
+            var tenantId = _config["AzureAd:TenantId"];
+            var clientId = _config["AzureAd:ClientId"];
+            var clientSecret = _config["AzureAd:ClientSecret"];
+
+            var keyVaultUrl = "https://raskinkeyvault.vault.azure.net/";
 
             var AzureADcredential = new ClientSecretCredential(tenantId, clientId, clientSecret);
             var client = new SecretClient(new Uri(keyVaultUrl), AzureADcredential);

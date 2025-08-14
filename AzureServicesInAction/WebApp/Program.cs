@@ -20,6 +20,15 @@ app.UseRouting();
 
 app.UseAuthorization();
 
+app.MapGet("/Home", (IConfiguration config) =>
+{
+    var tenantId = config["AzureAd:TenantId"];
+    var clientId = config["AzureAd:ClientId"];
+    var clientSecret = config["AzureAd:ClientSecret"];
+
+    return $"TenantId: {tenantId}, ClientId: {clientId}, ClientSecret: {clientSecret}";
+});
+
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
