@@ -1,5 +1,11 @@
-using System.Diagnostics;
+using Azure.Identity;
+using Azure.Security.KeyVault.Secrets;
+using Azure.Storage;
+using Azure.Storage.Blobs;
+using Azure.Storage.Blobs.Models;
+using Azure.Storage.Sas;
 using Microsoft.AspNetCore.Mvc;
+using System.Diagnostics;
 using WebApp.Models;
 
 namespace WebApp.Controllers
@@ -7,15 +13,164 @@ namespace WebApp.Controllers
     public class HomeController : Controller
     {
         private readonly ILogger<HomeController> _logger;
+        private readonly IConfiguration _config;
 
-        public HomeController(ILogger<HomeController> logger)
+        private readonly string tenantId;
+        private readonly string clientId;
+        private readonly string clientSecret;
+
+        private readonly string keyVaultUrl;
+
+        public HomeController(ILogger<HomeController> logger, IConfiguration config)
         {
             _logger = logger;
+            _config = config;
+
+            // Initialize tenantId, clientId, and clientSecret from _config
+            //tenantId = _config["AzureAd:TenantId"];
+            //clientId = _config["AzureAd:ClientId"];
+            //clientSecret = _config["AzureAd:ClientSecret"];
+
+            keyVaultUrl = "https://raskinkeyvault.vault.azure.net/";
+
+            // for Production use via CI/CD pipeline, use environment variables
+            tenantId = Environment.GetEnvironmentVariable("AZURE_TENANT_ID");
+            clientId = Environment.GetEnvironmentVariable("AZURE_CLIENT_ID");
+            clientSecret = Environment.GetEnvironmentVariable("AZURE_CLIENT_SECRET");
         }
 
         public IActionResult Index()
         {
             return View();
+        }
+
+        public async Task<IActionResult> Upload()
+        {
+            await GetAllImages();
+            return View();
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> Upload(IFormFile file)
+        {
+            var containerName = "uploads";
+
+            try
+            {
+                var AzureADcredential = new ClientSecretCredential(tenantId, clientId, clientSecret);
+                var client = new SecretClient(new Uri(keyVaultUrl), AzureADcredential);
+
+                if (file != null && file.Length > 0)
+                {
+                    // ------------ > Use Azure Key Vault to get the connection string
+                    KeyVaultSecret secret = await client.GetSecretAsync("BlobConnection");
+                    string connectionString = secret.Value;
+
+                    var containerClient = new BlobContainerClient(connectionString, containerName);
+                    await containerClient.CreateIfNotExistsAsync();
+
+                    var blobClient = containerClient.GetBlobClient(file.FileName);
+                    using var stream = file.OpenReadStream();
+                    await blobClient.UploadAsync(stream, overwrite: true);
+
+
+
+                    // ------------ > Use appsettings.json > Environment Variables to get the connection string
+                    //var connectionString = _config["environmentVariables:BlobConnection"];
+
+                    //var blobServiceClient = new BlobServiceClient(connectionString);
+                    //var containerClient = blobServiceClient.GetBlobContainerClient(containerName);
+                    //await containerClient.CreateIfNotExistsAsync();
+
+                    //var blobClient = containerClient.GetBlobClient(file.FileName);
+                    //using var stream = file.OpenReadStream();
+                    //await blobClient.UploadAsync(stream, overwrite: true);
+
+
+
+                    // ------------ > Generate SAS URL (valid for 1 hour)
+                    var accountName = GetValueFromConnectionString(connectionString, "AccountName");
+                    var accountKey = GetValueFromConnectionString(connectionString, "AccountKey");
+
+                    var credential = new StorageSharedKeyCredential(accountName, accountKey);
+
+                    var sasBuilder = new BlobSasBuilder
+                    {
+                        BlobContainerName = containerName,
+                        BlobName = file.FileName,
+                        Resource = "b",
+                        ExpiresOn = DateTimeOffset.UtcNow.AddHours(1)
+                    };
+                    sasBuilder.SetPermissions(BlobSasPermissions.Read);
+
+                    var sasUri = blobClient.GenerateSasUri(sasBuilder);
+
+                    ViewBag.Message = "File uploaded to Blob Storage!";
+                    ViewBag.ImageUrl = sasUri.ToString();
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error uploading file");
+                ViewBag.Message = "Error uploading file: " + ex.Message;
+            }
+
+            return View();
+        }
+
+        private string GetValueFromConnectionString(string connectionString, string key)
+        {
+            var parts = connectionString.Split(';');
+            foreach (var part in parts)
+            {
+                if (part.StartsWith(key + "=", StringComparison.OrdinalIgnoreCase))
+                {
+                    return part.Substring(key.Length + 1);
+                }
+            }
+            return null;
+        }
+
+        public async Task<IActionResult> GetAllImages()
+        {
+            //var connectionString = _config["environmentVariables:BlobConnection"];
+
+            var AzureADcredential = new ClientSecretCredential(tenantId, clientId, clientSecret);
+            var client = new SecretClient(new Uri(keyVaultUrl), AzureADcredential);
+
+            KeyVaultSecret secret = await client.GetSecretAsync("BlobConnection");
+            string connectionString = secret.Value;
+            var containerName = "uploads";
+
+            var blobServiceClient = new BlobServiceClient(connectionString);
+            var containerClient = blobServiceClient.GetBlobContainerClient(containerName);
+
+            var imageUrls = new List<string>();
+
+            await foreach (BlobItem blobItem in containerClient.GetBlobsAsync())
+            {
+                var blobClient = containerClient.GetBlobClient(blobItem.Name);
+                var imageUrl = blobClient.Uri.ToString();
+
+                if (blobItem.Properties.ContentType?.StartsWith("image/") == true ||
+                    blobItem.Name.EndsWith(".jpg") || blobItem.Name.EndsWith(".png") || blobItem.Name.EndsWith(".jpeg"))
+                {
+                    var sasBuilder = new BlobSasBuilder
+                    {
+                        BlobContainerName = containerName,
+                        BlobName = blobItem.Name,
+                        Resource = "b",
+                        ExpiresOn = DateTimeOffset.UtcNow.AddHours(1)
+                    };
+                    sasBuilder.SetPermissions(BlobSasPermissions.Read);
+
+                    var sasUri = blobClient.GenerateSasUri(sasBuilder);
+                    imageUrls.Add(sasUri.ToString());
+                    //imageUrls.Add(imageUrl);
+                }
+            }
+
+            return View(imageUrls);
         }
 
         public IActionResult Privacy()
