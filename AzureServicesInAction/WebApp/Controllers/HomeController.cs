@@ -4,9 +4,13 @@ using Azure.Storage;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Azure.Storage.Sas;
+using Microsoft.ApplicationInsights;
+using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.IdentityModel.Abstractions;
 using System.Diagnostics;
 using WebApp.Models;
+using WebApp.Services.MetricsLogger;
 
 namespace WebApp.Controllers
 {
@@ -14,12 +18,13 @@ namespace WebApp.Controllers
     {
         private readonly ILogger<HomeController> _logger;
         private readonly IConfiguration _config;
+        private readonly IMetricsLogger _metricsLogger;
 
-        public HomeController(ILogger<HomeController> logger, IConfiguration config)
+        public HomeController(ILogger<HomeController> logger, IConfiguration config, IMetricsLogger metricsLogger)
         {
             _logger = logger;
             _config = config;
-
+            _metricsLogger = metricsLogger;
         }
 
         public IActionResult Index()
@@ -40,6 +45,15 @@ namespace WebApp.Controllers
 
             try
             {
+                var stopwatch = Stopwatch.StartNew();
+
+                _metricsLogger.TrackEvent("FileUploaded", new Dictionary<string, string>
+                    {
+                        { "FileName", file.FileName },
+                        { "ContainerName", containerName },
+                        { "BlobUrl", ViewBag.ImageUrl }
+                    });
+
                 var tenantId = _config["AzureAd:TenantId"];
                 var clientId = _config["AzureAd:ClientId"];
                 var clientSecret = _config["AzureAd:ClientSecret"];
@@ -97,6 +111,11 @@ namespace WebApp.Controllers
                     ViewBag.Message = "File uploaded to Blob Storage!";
                     ViewBag.ImageUrl = sasUri.ToString();
                 }
+
+                stopwatch.Stop();
+                _metricsLogger.TrackPerformance("FileUploadTime", stopwatch.ElapsedMilliseconds);
+
+
             }
             catch (Exception ex)
             {
@@ -124,48 +143,62 @@ namespace WebApp.Controllers
         {
             //var connectionString = _config["environmentVariables:BlobConnection"];
 
+            var stopwatch = Stopwatch.StartNew();
+
             var tenantId = _config["AzureAd:TenantId"];
             var clientId = _config["AzureAd:ClientId"];
             var clientSecret = _config["AzureAd:ClientSecret"];
 
             var keyVaultUrl = "https://raskinkeyvault.vault.azure.net/";
 
-            var AzureADcredential = new ClientSecretCredential(tenantId, clientId, clientSecret);
-            var client = new SecretClient(new Uri(keyVaultUrl), AzureADcredential);
-
-            KeyVaultSecret secret = await client.GetSecretAsync("BlobConnection");
-            string connectionString = secret.Value;
-            var containerName = "uploads";
-
-            var blobServiceClient = new BlobServiceClient(connectionString);
-            var containerClient = blobServiceClient.GetBlobContainerClient(containerName);
-
-            var imageUrls = new List<string>();
-
-            await foreach (BlobItem blobItem in containerClient.GetBlobsAsync())
+            try
             {
-                var blobClient = containerClient.GetBlobClient(blobItem.Name);
-                var imageUrl = blobClient.Uri.ToString();
+                var AzureADcredential = new ClientSecretCredential(tenantId, clientId, clientSecret);
+                var client = new SecretClient(new Uri(keyVaultUrl), AzureADcredential);
 
-                if (blobItem.Properties.ContentType?.StartsWith("image/") == true ||
-                    blobItem.Name.EndsWith(".jpg") || blobItem.Name.EndsWith(".png") || blobItem.Name.EndsWith(".jpeg"))
+                KeyVaultSecret secret = await client.GetSecretAsync("BlobConnection");
+                string connectionString = secret.Value;
+                var containerName = "uploads";
+
+                var blobServiceClient = new BlobServiceClient(connectionString);
+                var containerClient = blobServiceClient.GetBlobContainerClient(containerName);
+
+                var imageUrls = new List<string>();
+
+                await foreach (BlobItem blobItem in containerClient.GetBlobsAsync())
                 {
-                    var sasBuilder = new BlobSasBuilder
+                    var blobClient = containerClient.GetBlobClient(blobItem.Name);
+                    var imageUrl = blobClient.Uri.ToString();
+
+                    if (blobItem.Properties.ContentType?.StartsWith("image/") == true ||
+                        blobItem.Name.EndsWith(".jpg") || blobItem.Name.EndsWith(".png") || blobItem.Name.EndsWith(".jpeg"))
                     {
-                        BlobContainerName = containerName,
-                        BlobName = blobItem.Name,
-                        Resource = "b",
-                        ExpiresOn = DateTimeOffset.UtcNow.AddHours(1)
-                    };
-                    sasBuilder.SetPermissions(BlobSasPermissions.Read);
+                        var sasBuilder = new BlobSasBuilder
+                        {
+                            BlobContainerName = containerName,
+                            BlobName = blobItem.Name,
+                            Resource = "b",
+                            ExpiresOn = DateTimeOffset.UtcNow.AddHours(1)
+                        };
+                        sasBuilder.SetPermissions(BlobSasPermissions.Read);
 
-                    var sasUri = blobClient.GenerateSasUri(sasBuilder);
-                    imageUrls.Add(sasUri.ToString());
-                    //imageUrls.Add(imageUrl);
+                        var sasUri = blobClient.GenerateSasUri(sasBuilder);
+                        imageUrls.Add(sasUri.ToString());
+                        //imageUrls.Add(imageUrl);
+                    }
                 }
-            }
 
-            return View(imageUrls);
+                stopwatch.Stop();
+                _metricsLogger.TrackPerformance("AllImagesLoadTime", stopwatch.ElapsedMilliseconds);
+
+                return View(imageUrls);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving images");
+                ViewBag.Message = "Error retrieving images: " + ex.Message;
+                return View(new List<string>());
+            }
         }
 
         public IActionResult Privacy()

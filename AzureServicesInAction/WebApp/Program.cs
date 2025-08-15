@@ -1,7 +1,22 @@
+using Microsoft.ApplicationInsights;
+using WebApp.Services.MetricsLogger;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
+
+
+//APPINSIGHTS_INSTRUMENTATIONKEY is set in the Azure portal for Application Insights integration.
+builder.Services.AddApplicationInsightsTelemetry();
+
+
+// Telemetry__EnableLogging = false/true in Azure App service to enable/disable logging/tracking
+builder.Services.Configure<TelemetryOptions>(
+    builder.Configuration.GetSection("Telemetry"));
+
+builder.Services.AddSingleton<IMetricsLogger, MetricsLogger>();
+builder.Services.AddSingleton<TelemetryClient>();
 
 var app = builder.Build();
 
