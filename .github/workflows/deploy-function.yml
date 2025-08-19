@@ -4,7 +4,7 @@ name: Deploy Azure Function
 on:
   push:
     paths:
-      - 'AzureServicesInAction/src/Functions/**'
+      - 'AzureServicesInAction/Functions/**'
       - '.github/workflows/deploy-function.yml'
 
 jobs:
@@ -21,13 +21,13 @@ jobs:
         dotnet-version: '8.0.x'
 
     - name: Restore dependencies
-      run: dotnet restore AzureServicesInAction/src/Functions/Functions.csproj
+      run: dotnet restore AzureServicesInAction/Functions/Functions.csproj
 
     - name: Build project
-      run: dotnet build AzureServicesInAction/src/Functions/Functions.csproj --configuration Release
+      run: dotnet build AzureServicesInAction/Functions/Functions.csproj --configuration Release
 
     - name: Publish project
-      run: dotnet publish AzureServicesInAction/src/Functions/Functions.csproj --configuration Release --output ./publish
+      run: dotnet publish AzureServicesInAction/Functions/Functions.csproj --configuration Release --output ./publish
 
     - name: Deploy to Azure Function App
       uses: azure/functions-action@v1
