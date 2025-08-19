@@ -1,0 +1,37 @@
+# .github/workflows/deploy-webapp.yml
+name: Deploy Web App
+
+on:
+  push:
+    paths:
+      - 'AzureServicesInAction/WebApp/**'
+      - '.github/workflows/deploy-webapp.yml'
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+
+    - name: Restore dependencies
+      run: dotnet restore AzureServicesInAction/WebApp/WebApp.csproj
+
+    - name: Build project
+      run: dotnet build AzureServicesInAction/WebApp/WebApp.csproj --configuration Release
+
+    - name: Publish project
+      run: dotnet publish AzureServicesInAction/WebApp/WebApp.csproj --configuration Release --output ./publish
+
+    - name: Deploy to Azure WebApp
+      uses: azure/webapps-deploy@v2
+      with:
+        app-name: azureservicesinaction
+        package: ./publish
+        publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
