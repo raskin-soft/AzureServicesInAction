@@ -4,7 +4,7 @@ name: Deploy Azure Function
 on:
   push:
     paths:
-      - '/Functions/**'
+      - 'AzureServicesInAction/src/Functions/**'
       - '.github/workflows/deploy-function.yml'
 
 jobs:
@@ -20,18 +20,18 @@ jobs:
       with:
         dotnet-version: '8.0.x'
 
-    - name: Restore
-      run: dotnet restore /Functions/Functions.csproj
+    - name: Restore dependencies
+      run: dotnet restore AzureServicesInAction/src/Functions/Functions.csproj
 
-    - name: Build
-      run: dotnet build /Functions/Functions.csproj --configuration Release
+    - name: Build project
+      run: dotnet build AzureServicesInAction/src/Functions/Functions.csproj --configuration Release
 
-    - name: Publish
-      run: dotnet publish /Functions/Functions.csproj --configuration Release --output ./publish
+    - name: Publish project
+      run: dotnet publish AzureServicesInAction/src/Functions/Functions.csproj --configuration Release --output ./publish
 
     - name: Deploy to Azure Function App
       uses: azure/functions-action@v1
       with:
         app-name: raskinblobtrigger
-        publish-profile: ${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE }}
         package: ./publish
+        publish-profile: ${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE }}
