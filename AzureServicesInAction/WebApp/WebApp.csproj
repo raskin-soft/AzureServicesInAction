@@ -15,6 +15,10 @@
 
   <ItemGroup>
     <Folder Include="Middleware\" />
+    <Folder Include="Interfaces\" />
+    <Folder Include="DTOs\" />
+    <Folder Include="Commands\" />
+    <Folder Include="Queries\" />
   </ItemGroup>
 
 </Project>

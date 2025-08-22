@@ -1,0 +1,18 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Folder Include="AzureOpenAI\Clients\" />
+    <Folder Include="AzureOpenAI\Models\" />
+    <Folder Include="AzureOpenAI\Extensions\" />
+    <Folder Include="Logging\" />
+    <Folder Include="KeyVault\" />
+    <Folder Include="Persistence\" />
+  </ItemGroup>
+
+</Project>
