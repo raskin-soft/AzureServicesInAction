@@ -1,0 +1,26 @@
+﻿@model WebApp.Models.ChatViewModel
+
+<h2>Azure OpenAI Chat</h2>
+
+<form method="post">
+    <div>
+        <label for="UserPrompt">Your Question:</label><br />
+        <input type="text" id="UserPrompt" name="UserPrompt" value="@Model.UserPrompt" style="width:400px;" />
+    </div>
+    <br />
+    <button type="submit">Ask</button>
+</form>
+
+@if (!string.IsNullOrWhiteSpace(Model.Response))
+{
+    <hr />
+    <h4>Response:</h4>
+    <div style="background:#f4f4f4;padding:10px;border-radius:5px;">
+        @Model.Response
+    </div>
+}
+
+<h2>AI Predictive Analysis</h2>
+<div>
+    @ViewBag.AIAnalysis
+</div>

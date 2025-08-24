@@ -9,6 +9,8 @@ using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Abstractions;
 using System.Diagnostics;
+using System.Reflection;
+using WebApp.Interfaces;
 using WebApp.Models;
 using WebApp.Services.MetricsLogger;
 
@@ -19,15 +21,17 @@ namespace WebApp.Controllers
         private readonly ILogger<HomeController> _logger;
         private readonly IConfiguration _config;
         private readonly IMetricsLogger _metricsLogger;
+        private readonly IChatService _chatService;
 
-        public HomeController(ILogger<HomeController> logger, IConfiguration config, IMetricsLogger metricsLogger)
+        public HomeController(ILogger<HomeController> logger, IConfiguration config, IMetricsLogger metricsLogger, IChatService chatService)
         {
             _logger = logger;
             _config = config;
             _metricsLogger = metricsLogger;
+            _chatService = chatService;
         }
 
-        public IActionResult Index()
+        public async Task<IActionResult> Index()
         {
             return View();
         }
@@ -199,6 +203,69 @@ namespace WebApp.Controllers
                 ViewBag.Message = "Error retrieving images: " + ex.Message;
                 return View(new List<string>());
             }
+        }
+
+
+        [HttpGet]
+        public async Task<IActionResult> ChatWithAI()
+        {
+            await AIAnalysis();
+            return View(new ChatViewModel());
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> ChatWithAI(ChatViewModel model)
+        {
+            if (!string.IsNullOrWhiteSpace(model.UserPrompt))
+            {
+                model.Response = await _chatService.GetResponseAsync(model.UserPrompt);
+            }
+
+            return View(model);
+        }
+
+        public async Task<IActionResult> AIAnalysis()
+        {
+
+            //// --------- Summarization
+            //var prompt = """
+            //Summarize the following customer feedback in 3 bullet points:
+
+            //"I love the product quality, but delivery was slow. Support team was helpful. I’ll buy again."
+            //""";
+
+
+            //            // --------- Sentiment Analysis
+            //            var prompt = """
+            //Analyze the sentiment of this review. Is it positive, negative, or mixed?
+
+            //"I love the product quality, but delivery was slow. Support team was helpful."
+            //""";
+
+
+            //            // --------- Recommendation
+            //            var prompt = """
+            //Based on this user's purchase history, recommend 3 products:
+
+            //- Bought: WidgetA, WidgetB
+            //- Browsed: WidgetC, WidgetD
+            //""";
+
+
+            // --------- Predictive Reasoning(Not true forecasting)
+            var prompt = """
+                            Based on the following sales data, what trend do you observe?
+
+                            Date       | Product | Sales
+                            2025-08-01 | WidgetA | 120
+                            2025-08-02 | WidgetA | 150
+                            2025-08-03 | WidgetA | 180
+                        """;
+
+
+            ViewBag.AIAnalysis = await _chatService.GetResponseAsync(prompt);
+
+            return View();
         }
 
         public IActionResult Privacy()

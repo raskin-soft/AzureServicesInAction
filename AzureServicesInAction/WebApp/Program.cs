@@ -1,4 +1,6 @@
 using Microsoft.ApplicationInsights;
+using WebApp.Interfaces;
+using WebApp.Services;
 using WebApp.Services.MetricsLogger;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -17,6 +19,22 @@ builder.Services.Configure<TelemetryOptions>(
 
 builder.Services.AddSingleton<IMetricsLogger, MetricsLogger>();
 builder.Services.AddSingleton<TelemetryClient>();
+
+// Load configuration
+var config = builder.Configuration;
+
+// Register named HttpClient for Azure OpenAI
+builder.Services.AddHttpClient("AzureOpenAI", client =>
+{
+    client.BaseAddress = new Uri(config["AzureOpenAI:Endpoint"]);
+    client.DefaultRequestHeaders.Add("api-key", config["AzureOpenAI:ApiKey"]);
+});
+
+// Register your OpenAI service
+builder.Services.AddScoped<IChatService, OpenAiService>();
+
+// Add MVC services
+builder.Services.AddControllersWithViews();
 
 var app = builder.Build();
 
