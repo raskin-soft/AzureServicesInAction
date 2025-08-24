@@ -1,0 +1,27 @@
+﻿@{
+    ViewData["Title"] = "Translator";
+}
+
+<h2>🌐 Azure Translator</h2>
+
+<form method="post">
+    <div class="form-group">
+        <label>Enter text:</label>
+        <textarea name="inputText" class="form-control" rows="3">@ViewBag.InputText</textarea>
+    </div>
+    <div class="form-group">
+        <label>Target Language ('bn' > Bangladesh | 'en' > English | 'ar' > Arabic | 'fr' > French | 'de' > German | 'he' > Hebrew | 'it' > Italian | 'lzh' > Chinese | 'ja' > Japanese |):</label>
+        <label><a href="https://learn.microsoft.com/en-us/azure/ai-services/translator/language-support">All Language Code</a></label>
+        <input type="text" name="targetLang" value="@ViewBag.TargetLang" class="form-control" />
+    </div>
+    <br />
+    <button type="submit" class="btn btn-primary">Translate</button>
+</form>
+
+@if (ViewBag.Result != null)
+{
+    <div class="alert alert-success mt-3">
+        <strong>Translated Text:</strong>
+        <p>@ViewBag.Result</p>
+    </div>
+}

@@ -1,0 +1,9 @@
+﻿@model WebApp.Models.ChatViewModel
+
+<h2>Speech to Text</h2>
+
+
+<form id="uploadForm" enctype="multipart/form-data" method="post" action="/AI/UploadAudio">
+    <input type="file" name="audioFile" accept="audio/*" capture>
+    <button type="submit">Upload & Transcribe</button>
+</form>

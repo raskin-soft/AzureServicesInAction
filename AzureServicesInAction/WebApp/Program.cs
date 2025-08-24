@@ -30,6 +30,18 @@ builder.Services.AddHttpClient("AzureOpenAI", client =>
     client.DefaultRequestHeaders.Add("api-key", config["AzureOpenAI:ApiKey"]);
 });
 
+builder.Services.AddHttpClient("AzureFoundry", client =>
+{
+    client.BaseAddress = new Uri(config["AzureFoundry:Endpoint"]);
+    client.DefaultRequestHeaders.Add("api-key", config["AzureFoundry:ApiKey"]);
+});
+
+builder.Services.AddHttpClient();
+builder.Services.AddScoped<ISpeechToTextService, SpeechToTextService>();
+builder.Services.AddScoped<IFoundryChatService, FoundryChatService>(); // ?????? why this is AddScoped
+builder.Services.AddSingleton<ICognitiveTextService, CognitiveTextService>(); // ?????? why this is AddSingleton
+builder.Services.AddScoped<ITranslatorService, TranslatorService>();
+
 // Register your OpenAI service
 builder.Services.AddScoped<IChatService, OpenAiService>();
 

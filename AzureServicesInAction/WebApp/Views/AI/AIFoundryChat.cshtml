@@ -1,0 +1,30 @@
+﻿@model WebApp.Models.ChatViewModel
+
+<h2>Azure AI Foundry Chat</h2>
+
+<form method="post">
+    <div>
+        <label for="UserPrompt">Your Query:</label><br />
+        <input type="text" id="UserPrompt" name="UserPrompt" value="@Model.UserPrompt" style="width:400px;" />
+    </div>
+    <br />
+    <button type="submit">Ask</button>
+</form>
+
+
+@if (ViewBag.ChatReply != null)
+{
+    <h3>GPT Analysis</h3>
+    <p>@ViewBag.ChatReply</p>
+
+    <h3>Sentiment</h3>
+    <p>@ViewBag.Sentiment</p>
+
+    <h3>Key Phrases</h3>
+    <ul>
+        @foreach (var phrase in ViewBag.KeyPhrases)
+        {
+            <li>@phrase</li>
+        }
+    </ul>
+}
